@@ -18,7 +18,7 @@ permissions:
 
 jobs:
   verify:
-    name: Verify tag and master branch
+    name: Verify tag and main branch
     runs-on: ubuntu-latest
 
     steps:
@@ -41,9 +41,9 @@ jobs:
             exit 1
           fi
 
-          git fetch origin master
-          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/master; then
-            echo "::error::Tag ${tag} does not point to a commit on master — refusing deployment."
+          git fetch origin main
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/main; then
+            echo "::error::Tag ${tag} does not point to a commit on main — refusing deployment."
             exit 1
           fi
 
@@ -61,8 +61,8 @@ jobs:
           fetch-depth: 0
           ref: ${{ github.ref }}
 
-      - name: Fetch tags and master
-        run: git fetch origin master --tags
+      - name: Fetch tags and main
+        run: git fetch origin main --tags
 
       - id: select
         name: Resolve previous tag and path filters
