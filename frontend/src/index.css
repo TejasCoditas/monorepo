@@ -1,0 +1,184 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap');
+
+:root {
+  --bg-gradient-start: #0f172a;
+  --bg-gradient-end: #1e293b;
+  --calc-bg: rgba(255, 255, 255, 0.03);
+  --calc-border: rgba(255, 255, 255, 0.08);
+  --display-bg: rgba(0, 0, 0, 0.25);
+  --btn-bg: rgba(255, 255, 255, 0.05);
+  --btn-hover: rgba(255, 255, 255, 0.1);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent-color: #3b82f6;
+  --accent-hover: #2563eb;
+  --operator-color: #f59e0b;
+  --delete-color: #ef4444;
+  --clear-color: #10b981;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  background: linear-gradient(135deg, var(--bg-gradient-start), var(--bg-gradient-end));
+  color: var(--text-primary);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.calculator-app {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  padding: 20px;
+}
+
+.calculator {
+  background: var(--calc-bg);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: 28px;
+  padding: 32px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+  border: 1px solid var(--calc-border);
+}
+
+.display {
+  background: var(--display-bg);
+  border-radius: 20px;
+  padding: 24px;
+  margin-bottom: 24px;
+  text-align: right;
+  min-height: 120px;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  box-shadow: inset 0 4px 15px rgba(0,0,0,0.3);
+  overflow: hidden;
+}
+
+.expression {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  word-wrap: break-word;
+  font-weight: 500;
+  letter-spacing: 1px;
+}
+
+.result {
+  font-size: 2.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  word-wrap: break-word;
+  line-height: 1.1;
+}
+
+.controls {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.controls .btn {
+  flex: 1;
+  font-weight: 600;
+  letter-spacing: 1px;
+}
+
+.controls .btn.clear {
+  color: var(--clear-color);
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.controls .btn.clear:hover {
+  background: rgba(16, 185, 129, 0.2);
+}
+
+.controls .btn.delete {
+  color: var(--delete-color);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.controls .btn.delete:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+
+.keypad {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+}
+
+.btn {
+  background: var(--btn-bg);
+  border: 1px solid rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  padding: 18px 0;
+  border-radius: 16px;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  font-family: inherit;
+  font-weight: 500;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn:hover {
+  background: var(--btn-hover);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+}
+
+.btn:active {
+  transform: translateY(1px);
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+}
+
+.btn.operator {
+  color: var(--operator-color);
+  background: rgba(245, 158, 11, 0.1);
+}
+
+.btn.operator:hover {
+  background: rgba(245, 158, 11, 0.2);
+}
+
+.btn.func {
+  font-size: 1rem;
+  color: var(--accent-color);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.btn.func:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.btn.equal {
+  background: linear-gradient(135deg, var(--accent-color) 0%, var(--accent-hover) 100%);
+  color: white;
+  border: none;
+  font-size: 1.5rem;
+  grid-column: span 2;
+  box-shadow: 0 4px 14px 0 rgba(59, 130, 246, 0.39);
+}
+
+.btn.equal:hover {
+  background: linear-gradient(135deg, var(--accent-hover) 0%, #1d4ed8 100%);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.5);
+}

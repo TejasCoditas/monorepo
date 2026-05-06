@@ -1,0 +1,197 @@
+name: Deploy Production
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+  workflow_run:
+    workflows:
+      - Tagging (semantic version tag)
+    types:
+      - completed
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Verify tag and master branch
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check production deploy preconditions
+        run: |
+          set -euo pipefail
+
+          if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+            echo "::error::Production deploy runs only from a version tag (vMAJOR.MINOR.PATCH), not branches. Ref: ${GITHUB_REF_NAME}"
+            exit 1
+          fi
+
+          tag="${GITHUB_REF_NAME}"
+          if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "::error::Production tag must be vMAJOR.MINOR.PATCH (digits only, e.g. v1.0.0). Got: ${tag}"
+            exit 1
+          fi
+
+          git fetch origin master
+          if ! git merge-base --is-ancestor "${GITHUB_SHA}" origin/master; then
+            echo "::error::Tag ${tag} does not point to a commit on master — refusing deployment."
+            exit 1
+          fi
+
+  detectDeployTargets:
+    name: Detect deploy targets (monorepo paths)
+    runs-on: ubuntu-latest
+    needs: verify
+    outputs:
+      deploy_frontend: ${{ steps.select.outputs.deploy_frontend }}
+      deploy_backend: ${{ steps.select.outputs.deploy_backend }}
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ref: ${{ github.ref }}
+
+      - name: Fetch tags and master
+        run: git fetch origin master --tags
+
+      - id: select
+        name: Resolve previous tag and path filters
+        run: |
+          set -euo pipefail
+          current="${GITHUB_REF_NAME}"
+
+          mapfile -t tags < <(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname --merged "${GITHUB_SHA}" 2>/dev/null || true)
+
+          prev_ref=""
+          seen=false
+          for t in "${tags[@]}"; do
+            if [[ "$seen" == true ]]; then
+              prev_ref="$t"
+              break
+            fi
+            if [[ "$t" == "$current" ]]; then
+              seen=true
+            fi
+          done
+
+          if [[ "$seen" == false ]]; then
+            echo "::error::Tag ${current} was not found among semver tags merged into ${GITHUB_SHA:0:7}."
+            exit 1
+          fi
+
+          if [[ -z "$prev_ref" ]]; then
+            echo "No previous release tag before ${current} — deploying frontend and backend."
+            echo "deploy_frontend=true" >> "$GITHUB_OUTPUT"
+            echo "deploy_backend=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          prev_sha=$(git rev-parse "${prev_ref}^{}")
+          head_sha="${GITHUB_SHA}"
+          mapfile -t files < <(git diff --name-only "${prev_sha}".."${head_sha}" 2>/dev/null || true)
+
+          if [[ ${#files[@]} -eq 0 ]]; then
+            echo "::error::No changed files between ${prev_ref} (${prev_sha:0:7}) and ${current} (${head_sha:0:7}). Nothing to deploy."
+            exit 1
+          fi
+
+          has_fe=false
+          has_be=false
+          has_other=false
+          for f in "${files[@]}"; do
+            [[ -z "$f" ]] && continue
+            case "$f" in
+              frontend/*|frontend) has_fe=true ;;
+              backend/*|backend) has_be=true ;;
+              *) has_other=true ;;
+            esac
+          done
+
+          if [[ "$has_other" == true ]]; then
+            dep_fe=true
+            dep_be=true
+            echo "Paths outside frontend/ and backend/ changed — deploying frontend and backend."
+          else
+            dep_fe=$has_fe
+            dep_be=$has_be
+          fi
+
+          echo "Changed files (${#files[@]}):"
+          printf '%s\n' "${files[@]}"
+
+          echo "deploy_frontend=${dep_fe}" >> "$GITHUB_OUTPUT"
+          echo "deploy_backend=${dep_be}" >> "$GITHUB_OUTPUT"
+
+  # Backend (Serverless) — the .env is stored in the S3 bucket
+  deploy-backend:
+    name: Deploy Backend (Serverless)
+    runs-on: ubuntu-latest
+    needs: [verify, detectDeployTargets]
+    if: needs.detectDeployTargets.outputs.deploy_backend == 'true'
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Set backend working directory
+        id: be_dir
+        run: |
+          if [[ -d backend ]]; then
+            echo "wd=backend" >> "$GITHUB_OUTPUT"
+            echo "Using monorepo directory: backend/"
+          else
+            echo "wd=." >> "$GITHUB_OUTPUT"
+            echo "Using repository root for backend (no backend/ yet)."
+          fi
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Build and deploy bu-serverless-backend (prod)
+        working-directory: ${{ steps.be_dir.outputs.wd }}
+      
+        run: |
+          echo "Deploying backend for $GITHUB_REF"
+          echo ""
+
+  deploy-frontend:
+    name: Deploy production (FE)
+    runs-on: ubuntu-latest
+    needs: [verify, detectDeployTargets]
+    if: needs.detectDeployTargets.outputs.deploy_frontend == 'true'
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Set frontend working directory
+        id: fe_dir
+        run: |
+          if [[ -d frontend ]]; then
+            echo "wd=frontend" >> "$GITHUB_OUTPUT"
+            echo "Using monorepo directory: frontend/"
+          else
+            echo "wd=." >> "$GITHUB_OUTPUT"
+            echo "Using repository root for frontend (no frontend/ yet)."
+          fi
+
+      - name: FE build and deploy for prod
+        working-directory: ${{ steps.fe_dir.outputs.wd }}
+        run: |
+          echo "Deploying frontend for $GITHUB_REF"
+          echo ""

@@ -1,0 +1,17 @@
+{
+  "name": "scientific-calculator-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "start": "npm run start --workspaces --if-present",
+    "dev": "concurrently \"npm run dev --workspace=frontend\" \"npm start --workspace=backend\"",
+    "install:all": "npm install"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  }
+}
