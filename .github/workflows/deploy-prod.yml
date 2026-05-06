@@ -4,13 +4,6 @@ on:
   push:
     tags:
       - 'v[0-9]+.[0-9]+.[0-9]+'
-  workflow_run:
-    workflows:
-      - Tagging (semantic version tag)
-    types:
-      - completed
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
@@ -30,21 +23,12 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            git fetch origin --tags
-            tag=$(git describe --tags --abbrev=0 2>/dev/null || true)
-            if [[ -z "${tag}" ]]; then
-              echo "::error::No tag found for workflow_run trigger."
-              exit 1
-            fi
-            echo "Workflow run triggered. Latest tag is ${tag}"
-          else
-            if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
-              echo "::error::Production deploy runs only from a version tag (vMAJOR.MINOR.PATCH), not branches. Ref: ${GITHUB_REF_NAME}"
-              exit 1
-            fi
-            tag="${GITHUB_REF_NAME}"
+          if [[ "${GITHUB_REF}" != refs/tags/* ]]; then
+            echo "::error::Production deploy runs only from a version tag (vMAJOR.MINOR.PATCH), not branches. Ref: ${GITHUB_REF_NAME}"
+            exit 1
           fi
+
+          tag="${GITHUB_REF_NAME}"
 
           if [[ ! "${tag}" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::Production tag must be vMAJOR.MINOR.PATCH (digits only, e.g. v1.0.0). Got: ${tag}"
@@ -79,11 +63,7 @@ jobs:
         run: |
           set -euo pipefail
           
-          if [[ "${{ github.event_name }}" == "workflow_run" ]]; then
-            current=$(git describe --tags --abbrev=0 2>/dev/null || true)
-          else
-            current="${GITHUB_REF_NAME}"
-          fi
+          current="${GITHUB_REF_NAME}"
 
           mapfile -t tags < <(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname --merged "${GITHUB_SHA}" 2>/dev/null || true)
 
