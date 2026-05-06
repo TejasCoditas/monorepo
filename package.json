@@ -12,6 +12,7 @@
     "install:all": "npm install"
   },
   "devDependencies": {
+    "@semantic-release/exec": "^7.1.0",
     "@semantic-release/git": "^10.0.1",
     "concurrently": "^9.2.1",
     "conventional-changelog-conventionalcommits": "^9.3.1",
